@@ -53,10 +53,12 @@ class RecipientController {
     }
     const { name } = req.body;
 
-    const recipient = await Recipient.findByPk(req.userId);
+    const recipient = await Recipient.findByPk(req.params.id);
 
-    if (name && name !== recipient.name) {
-      const recipientExists = await Recipient.findOne({ where: { name } });
+    if (name && name === recipient.name) {
+      const recipientExists = await Recipient.findOne({
+        where: { name: recipient.name }
+      });
 
       if (recipientExists) {
         return res.status(400).json({ error: 'Recipient already exists' });

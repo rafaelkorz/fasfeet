@@ -1,5 +1,6 @@
 import * as Yup from 'yup';
 import Deliverymans from '../models/Deliverymans';
+import File from '../models/File';
 
 class DeliverymansController {
   async store(req, res) {
@@ -32,19 +33,32 @@ class DeliverymansController {
   }
 
   async update(req, res) {
-    const deliverymans = await Deliverymans.findByPk(req.params.id);
-
-    if (!deliverymans) {
-      return res.status(400).json({ error: 'Deliverymans not exists' });
+    const deliveryman = await Deliverymans.findOne({
+      where: { id: req.params.id }
+    });
+    // verfica se o id existe no banco de dados
+    if (!deliveryman) {
+      return res.status(400).json({ Error: 'Deliveryman ID does not exist!' });
     }
 
-    const { id, name, email } = await deliverymans.update(req.body);
-
-    return res.json({
-      id,
-      name,
-      email
+    const schema = Yup.object().shape({
+      name: Yup.string(),
+      email: Yup.string().email()
     });
+
+    if (!(await schema.isValid(req.body))) {
+      return res.status(400).json({ Error: 'Validation fails!' });
+    }
+
+    const { email } = req.body;
+
+    if (email && email === deliveryman.email) {
+      return res.status(400).json({ Error: 'Email already exists!' });
+    }
+
+    const { id, name } = await deliveryman.update(req.body);
+
+    return res.json({ id, name, email });
   }
 
   async delete(req, res) {
@@ -59,7 +73,17 @@ class DeliverymansController {
   }
 
   async index(req, res) {
-    return res.json(await Deliverymans.findAll({}));
+    const deliveryman = await Deliverymans.findAll({
+      attributes: ['id', 'name', 'email', 'avatar_id'],
+      include: [
+        {
+          model: File,
+          as: 'avatar',
+          attributes: ['name', 'path', 'url']
+        }
+      ]
+    });
+    return res.json(deliveryman);
   }
 }
 
