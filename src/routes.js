@@ -4,8 +4,9 @@ import multerConfig from './config/multer';
 
 import UserController from './app/controllers/UserController';
 import RecipientController from './app/controllers/RecipientController';
-import DeliverymansController from './app/controllers/DeliverymansController';
+import DeliverymanController from './app/controllers/DeliverymanController';
 import FileController from './app/controllers/FileController';
+import OrderController from './app/controllers/OrderController';
 
 import SessionController from './app/controllers/SessionController';
 
@@ -19,15 +20,21 @@ routes.post('/sessions', SessionController.store);
 
 routes.use(authMiddleware);
 
-routes.post('/deliverymans', DeliverymansController.store);
-routes.put('/deliverymans/:id', DeliverymansController.update);
-routes.delete('/deliverymans/:id', DeliverymansController.delete);
-routes.get('/deliverymans', DeliverymansController.index);
+routes.post('/deliverymans', DeliverymanController.store);
+routes.put('/deliverymans/:id', DeliverymanController.update);
+routes.delete('/deliverymans/:id', DeliverymanController.delete);
+routes.get('/deliverymans', DeliverymanController.index);
 
 routes.post('/recipient', RecipientController.store);
 routes.put('/recipient/:id', RecipientController.update);
+routes.get('/recipient', RecipientController.index);
 
 routes.post('/files', upload.single('file'), FileController.store);
+
+routes.post('/orders', OrderController.store);
+routes.get('/orders', OrderController.index);
+routes.delete('/orders/:id', OrderController.delete);
+routes.put('/orders/:id', OrderController.put);
 
 routes.put('/users', UserController.update);
 

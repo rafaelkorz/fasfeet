@@ -73,6 +73,11 @@ class RecipientController {
       provider
     });
   }
+
+  async index(req, res) {
+    const recipient = await Recipient.findAll({});
+    return res.json(recipient);
+  }
 }
 
 export default new RecipientController();
