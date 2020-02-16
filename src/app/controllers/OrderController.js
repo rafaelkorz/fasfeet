@@ -1,7 +1,10 @@
 import * as Yup from 'yup';
+import { parseISO, format, isBefore } from 'date-fns';
 import Order from '../models/Order';
 import Recipient from '../models/Recipient';
 import Deliveryman from '../models/Deliveryman';
+import Queue from '../../lib/Queue';
+import OrderMail from '../jobs/OrderMail';
 
 class OrderController {
   async store(req, res) {
@@ -32,8 +35,18 @@ class OrderController {
       return res.status(400).json({ Error: 'Deliveryman ID does not exist!' });
     }
 
-    const { id, product } = await Order.create(req.body);
-    return res.json({ id, product, recipient_id, deliveryman_id });
+    const { prod } = await Order.create(req.body);
+
+    const deliveryman = await Deliveryman.findByPk(deliveryman_id);
+    const recipient = await Recipient.findByPk(recipient_id);
+
+    await Queue.add(OrderMail.key, {
+      prod,
+      deliveryman,
+      recipient
+    });
+
+    return res.json(req.body);
   }
 
   async index(req, res) {
@@ -47,6 +60,8 @@ class OrderController {
         'product',
         'recipient_id',
         'deliveryman_id',
+        'start_date',
+        'end_date',
         'signatures_id'
       ]
     });
@@ -66,7 +81,7 @@ class OrderController {
     return res.status(200).json({});
   }
 
-  async put(req, res) {
+  async update(req, res) {
     const order = await Order.findOne({ where: { id: req.params.id } });
 
     if (!order) {
@@ -83,12 +98,62 @@ class OrderController {
       return res.status(400).json({ Error: 'Validation fails' });
     }
 
-    try {
-      await order.update(req.body);
-      return res.status(200).json({ order });
-    } catch (err) {
-      return res.status(500).json({ Error: 'Anything wrong happend...' });
+    await order.update(req.body);
+    return res.status(200).json({ order });
+  }
+
+  async withdraw(req, res) {
+    const order = await Order.findOne({ where: { id: req.params.id } });
+
+    if (!order) {
+      return res.status(400).json({ Error: 'Order ID does not exist!' });
     }
+
+    const schema = Yup.object().shape({
+      start_date: Yup.date().required()
+    });
+
+    if (!(await schema.isValid(req.body))) {
+      return res.status(400).json({ Error: 'Validation fails' });
+    }
+
+    const { start_date } = req.body;
+
+    if (isBefore(parseISO(start_date), new Date()) === true) {
+      return res.status(400).json({ Error: 'Start date is before today!' });
+    }
+
+    const start = format(parseISO(start_date), 'HH:mm')
+      .split(':')
+      .join('')
+      .split('0')
+      .join('');
+
+    if (start < 8 || start > 18) {
+      return res.status(400).json({ Error: 'You can not start at this hour!' });
+    }
+
+    await order.update(req.body);
+    return res.status(200).json({ order });
+  }
+
+  async delivered(req, res) {
+    const order = await Order.findOne({ where: { id: req.params.id } });
+
+    if (!order) {
+      return res.status(400).json({ Error: 'Order ID does not exist!' });
+    }
+
+    const schema = Yup.object().shape({
+      end_date: Yup.date().required()
+    });
+
+    if (!(await schema.isValid(req.body))) {
+      return res.status(400).json({ Error: 'Validation fails' });
+    }
+
+    await order.update(req.body);
+    return res.status(200).json({ order });
   }
 }
 
