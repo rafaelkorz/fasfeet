@@ -6,14 +6,14 @@ const jobs = [OrderMail];
 
 class Queue {
   constructor() {
-    this.queus = {};
+    this.queues = {};
 
     this.init();
   }
 
   init() {
     jobs.forEach(({ key, handle }) => {
-      this.queus[key] = {
+      this.queues[key] = {
         bee: new Bee(key, {
           redis: redisConfig
         }),
@@ -23,12 +23,13 @@ class Queue {
   }
 
   add(queue, job) {
-    return this.queus[queue].bee.createJob(job).save();
+    return this.queues[queue].bee.createJob(job).save();
   }
 
   processQueue() {
     jobs.forEach(job => {
-      const { bee, handle } = this.queus[job.key];
+      const { bee, handle } = this.queues[job.key];
+
       bee.on('failed', this.handleFailure).process(handle);
     });
   }

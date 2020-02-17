@@ -3,6 +3,7 @@ import { parseISO, format, isBefore } from 'date-fns';
 import Order from '../models/Order';
 import Recipient from '../models/Recipient';
 import Deliveryman from '../models/Deliveryman';
+import File from '../models/File';
 import Queue from '../../lib/Queue';
 import OrderMail from '../jobs/OrderMail';
 
@@ -17,7 +18,7 @@ class OrderController {
     if (!(await schema.isValid(req.body))) {
       return res.status(400).json({ Error: 'Validation fails' });
     }
-    const { recipient_id, deliveryman_id } = req.body;
+    const { recipient_id, deliveryman_id, product } = req.body;
 
     const isRecipient = await Recipient.findOne({
       where: { id: recipient_id }
@@ -35,13 +36,13 @@ class OrderController {
       return res.status(400).json({ Error: 'Deliveryman ID does not exist!' });
     }
 
-    const { prod } = await Order.create(req.body);
+    await Order.create(req.body);
 
     const deliveryman = await Deliveryman.findByPk(deliveryman_id);
     const recipient = await Recipient.findByPk(recipient_id);
 
     await Queue.add(OrderMail.key, {
-      prod,
+      product,
       deliveryman,
       recipient
     });
@@ -50,23 +51,44 @@ class OrderController {
   }
 
   async index(req, res) {
-    const { page = 1 } = req.query;
-    const orders = await Order.findAll({
-      order: ['created_at'],
-      limit: 20,
-      offset: (page - 1) * 20,
+    const deliveries = await Order.findAll({
+      include: [
+        {
+          model: Deliveryman,
+          as: 'deliveryman',
+          attributes: ['id', 'name', 'email', 'avatar_id'],
+          include: {
+            model: File,
+            as: 'avatar',
+            attributes: ['name', 'path', 'url']
+          }
+        },
+        {
+          model: Recipient,
+          as: 'recipient',
+          attributes: [
+            'id',
+            'name',
+            'street',
+            'zip_code',
+            'number',
+            'state',
+            'city',
+            'complement'
+          ]
+        }
+      ],
       attributes: [
         'id',
         'product',
-        'recipient_id',
         'deliveryman_id',
+        'recipient_id',
+        'canceled_at',
         'start_date',
-        'end_date',
-        'signatures_id'
+        'end_date'
       ]
     });
-
-    return res.json(orders);
+    return res.json(deliveries);
   }
 
   async delete(req, res) {

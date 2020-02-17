@@ -6,19 +6,19 @@ class OrderMail {
   }
 
   async handle({ data }) {
-    const { prod, deliveryman, recipient } = data;
+    const { product, deliveryman, recipient } = data;
 
     await Mail.sendMail({
       to: `${deliveryman.name} <${deliveryman.email}>`,
       subject: `Detalhes da entrega`,
-      template: 'Detail',
+      template: 'newOrder',
       context: {
-        product: prod,
+        prod: product,
         deliveryman: deliveryman.name,
         recipientName: recipient.name,
         recipientStreet: recipient.street,
         recipientNumber: recipient.number,
-        recipientZipCode: recipient.zipcode,
+        recipientZipCode: recipient.zip_code,
         recipientCity: recipient.city,
         recipientState: recipient.state,
         recipientComplement: recipient.complement || 'Não informado'
@@ -27,4 +27,4 @@ class OrderMail {
   }
 }
 
-export default OrderMail;
+export default new OrderMail();
