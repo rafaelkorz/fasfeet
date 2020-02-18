@@ -166,16 +166,19 @@ class OrderController {
       return res.status(400).json({ Error: 'Order ID does not exist!' });
     }
 
-    const schema = Yup.object().shape({
-      end_date: Yup.date().required()
+    const { originalname: name, filename: path } = req.file;
+
+    const newFile = await File.create({
+      name,
+      path
     });
 
-    if (!(await schema.isValid(req.body))) {
-      return res.status(400).json({ Error: 'Validation fails' });
-    }
+    const finishedDelivery = await order.update({
+      signatures_id: newFile.id,
+      end_date: new Date()
+    });
 
-    await order.update(req.body);
-    return res.status(200).json({ order });
+    return res.json(finishedDelivery);
   }
 }
 
