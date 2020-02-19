@@ -1,0 +1,19 @@
+<strong>Olá, {{ deliveryman }}</strong>
+<p>Há um cancelamento de encomenda:</p>
+
+<strong>Produto: </strong>{{ prod }}.<br /><br />
+
+<strong>Detalhes do Destinatário: </strong><br />
+<p>
+  <strong>Nome: </strong>{{ recipientName }}.<br />
+  <strong>Endereço: </strong>{{ recipientStreet }}.<br />
+  <strong>Número: </strong>{{ recipientNumber }}.<br />
+  <strong>CEP: </strong>{{ recipientZipCode }}.<br />
+  <strong>Cidade: </strong>{{ recipientCity }}.<br />
+  <strong>Estado: </strong>{{ recipientState }}.<br />
+  <strong>Complemento: </strong>{{ recipientComplement }}.
+  <br /><br />
+  <small>
+    ENTREGA CANCELADA!!!
+  </small>
+</p>

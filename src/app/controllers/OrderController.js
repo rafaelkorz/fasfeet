@@ -1,5 +1,14 @@
 import * as Yup from 'yup';
-import { parseISO, format, isBefore } from 'date-fns';
+import {
+  startOfDay,
+  endOfDay,
+  setHours,
+  setMinutes,
+  setSeconds,
+  isAfter,
+  isBefore
+} from 'date-fns';
+import { Op } from 'sequelize';
 import Order from '../models/Order';
 import Recipient from '../models/Recipient';
 import Deliveryman from '../models/Deliveryman';
@@ -76,6 +85,11 @@ class OrderController {
             'city',
             'complement'
           ]
+        },
+        {
+          model: File,
+          as: 'signature',
+          attributes: ['name', 'path', 'url']
         }
       ],
       attributes: [
@@ -125,38 +139,53 @@ class OrderController {
   }
 
   async withdraw(req, res) {
-    const order = await Order.findOne({ where: { id: req.params.id } });
+    const { deliverymanId, orderId } = req.params;
 
-    if (!order) {
-      return res.status(400).json({ Error: 'Order ID does not exist!' });
+    const deliveryman = await Deliveryman.findByPk(deliverymanId);
+    if (!deliveryman) {
+      return res.status(400).json({ Error: 'Deliveryman does not exist!' });
     }
 
-    const schema = Yup.object().shape({
-      start_date: Yup.date().required()
+    const order = await Order.findOne({
+      where: {
+        id: orderId,
+        deliveryman_id: deliverymanId,
+        start_date: null,
+        canceled_at: null
+      }
+    });
+    if (!order) {
+      return res.status(400).json({ Error: 'Order does not exist!' });
+    }
+
+    const date = new Date();
+
+    const startDelivery = setSeconds(setMinutes(setHours(date, 8), 0), 0);
+    const endDelivery = setSeconds(setMinutes(setHours(date, 18), 0), 0);
+
+    if (!(isAfter(date, startDelivery) && isBefore(date, endDelivery))) {
+      return res
+        .status(400)
+        .json({ Error: 'You can start between 08:00 and 18:00' });
+    }
+
+    const { count: countAttempts } = await Order.findAndCountAll({
+      where: {
+        deliveryman_id: deliverymanId,
+        canceled_at: null,
+        start_date: { [Op.between]: [startOfDay(date), endOfDay(date)] }
+      }
     });
 
-    if (!(await schema.isValid(req.body))) {
-      return res.status(400).json({ Error: 'Validation fails' });
+    if (countAttempts >= 5) {
+      return res
+        .status(400)
+        .json({ Error: 'You have reached your 5 attempts' });
     }
 
-    const { start_date } = req.body;
+    const deliveryStart = await order.update({ start_date: new Date() });
 
-    if (isBefore(parseISO(start_date), new Date()) === true) {
-      return res.status(400).json({ Error: 'Start date is before today!' });
-    }
-
-    const start = format(parseISO(start_date), 'HH:mm')
-      .split(':')
-      .join('')
-      .split('0')
-      .join('');
-
-    if (start < 8 || start > 18) {
-      return res.status(400).json({ Error: 'You can not start at this hour!' });
-    }
-
-    await order.update(req.body);
-    return res.status(200).json({ order });
+    return res.json(deliveryStart);
   }
 
   async delivered(req, res) {
