@@ -4,3 +4,4 @@
 /vendor
 Homestead.json
 yarn-error.log
+/.env
