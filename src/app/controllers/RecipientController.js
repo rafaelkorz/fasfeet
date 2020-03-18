@@ -1,4 +1,5 @@
 import * as Yup from 'yup';
+import { Op } from 'sequelize';
 import Recipient from '../models/Recipient';
 
 class RecipientController {
@@ -75,8 +76,23 @@ class RecipientController {
   }
 
   async index(req, res) {
-    const recipient = await Recipient.findAll({});
-    return res.json(recipient);
+    const { id } = req.params;
+    const { page, q } = req.query;
+    const atualPage = page || '1';
+    const name = q || '';
+
+    if (id) {
+      const recipient = await Recipient.findByPk(id);
+      return res.json(recipient);
+    }
+
+    const recipients = await Recipient.findAndCountAll({
+      where: { name: { [Op.iLike]: `%${name}%` } },
+      order: [['name', 'ASC']],
+      limit: 5,
+      offset: (atualPage - 1) * 5
+    });
+    return res.json(recipients);
   }
 }
 

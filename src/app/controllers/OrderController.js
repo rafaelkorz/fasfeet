@@ -60,49 +60,42 @@ class OrderController {
   }
 
   async index(req, res) {
-    const deliveries = await Order.findAll({
+    const { page, q } = req.query;
+    const atualPage = page || '1';
+    const name = q || '';
+
+    const deliverys = await Order.findAndCountAll({
+      where: {
+        product: { [Op.iLike]: `%${name}%` }
+      },
       include: [
-        {
-          model: Deliveryman,
-          as: 'deliveryman',
-          attributes: ['id', 'name', 'email', 'avatar_id'],
-          include: {
-            model: File,
-            as: 'avatar',
-            attributes: ['name', 'path', 'url']
-          }
-        },
-        {
-          model: Recipient,
-          as: 'recipient',
-          attributes: [
-            'id',
-            'name',
-            'street',
-            'zip_code',
-            'number',
-            'state',
-            'city',
-            'complement'
-          ]
-        },
         {
           model: File,
           as: 'signature',
           attributes: ['name', 'path', 'url']
+        },
+        {
+          model: Recipient,
+          as: 'recipient'
+        },
+        {
+          model: Deliveryman,
+          as: 'deliveryman',
+          attributes: ['id', 'name'],
+          include: [
+            {
+              model: File,
+              as: 'avatar',
+              attributes: ['id', 'path', 'url']
+            }
+          ]
         }
       ],
-      attributes: [
-        'id',
-        'product',
-        'deliveryman_id',
-        'recipient_id',
-        'canceled_at',
-        'start_date',
-        'end_date'
-      ]
+      order: [['id', 'ASC']],
+      limit: 4,
+      offset: (atualPage - 1) * 4
     });
-    return res.json(deliveries);
+    return res.json(deliverys);
   }
 
   async delete(req, res) {

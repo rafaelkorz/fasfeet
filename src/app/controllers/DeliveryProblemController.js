@@ -29,16 +29,35 @@ class DeliveryProblemController {
   }
 
   async index(req, res) {
-    const problem = await DeliveryProblem.findAll({
-      attributes: ['id', 'delivery_id', 'description'],
-      include: {
-        model: Order,
-        as: 'order_problem',
-        attributes: ['id', 'product', 'recipient_id', 'deliveryman_id']
-      }
-    });
+    const { id } = req.params;
+    const { page } = req.query;
+    const atualPage = page || '1';
 
-    return res.json(problem);
+    if (id) {
+      const deliveryProblem = await DeliveryProblem.findAndCountAll({
+        where: {
+          delivery_id: id
+        },
+        attributes: ['id', 'description']
+      });
+
+      return res.json(deliveryProblem);
+    }
+
+    const deliveryProblems = await DeliveryProblem.findAndCountAll({
+      include: [
+        {
+          model: Order,
+          as: 'order_problem',
+          attributes: ['id', 'product', 'start_date', 'end_date', 'canceled_at']
+        }
+      ],
+      order: [['delivery_id', 'ASC']],
+      limit: 5,
+      offset: (atualPage - 1) * 5,
+      attributes: ['id', 'description']
+    });
+    return res.json(deliveryProblems);
   }
 
   async store(req, res) {

@@ -1,4 +1,5 @@
 import * as Yup from 'yup';
+import { Op } from 'sequelize';
 import Deliveryman from '../models/Deliveryman';
 import File from '../models/File';
 
@@ -73,17 +74,38 @@ class DeliverymansController {
   }
 
   async index(req, res) {
-    const deliveryman = await Deliveryman.findAll({
-      attributes: ['id', 'name', 'email', 'avatar_id'],
+    const { id } = req.params;
+    const { page, q } = req.query;
+    const atualPage = page || '1';
+    const name = q || '';
+
+    if (id) {
+      const deliveryman = await Deliveryman.findByPk(id, {
+        include: [
+          {
+            model: File,
+            as: 'avatar',
+            attributes: ['name', 'path', 'url']
+          }
+        ]
+      });
+      return res.json(deliveryman);
+    }
+
+    const deliverymans = await Deliveryman.findAndCountAll({
+      where: { name: { [Op.iLike]: `%${name}%` } },
       include: [
         {
           model: File,
           as: 'avatar',
           attributes: ['name', 'path', 'url']
         }
-      ]
+      ],
+      order: [['name', 'ASC']],
+      limit: 4,
+      offset: (atualPage - 1) * 4
     });
-    return res.json(deliveryman);
+    return res.json(deliverymans);
   }
 }
 
